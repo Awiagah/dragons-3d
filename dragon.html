@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Metaverse Dragon</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #000; }
+        canvas { display: block; }
+    </style>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+
+<script type="module">
+    import * as THREE from 'three';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { VRButton } from 'three/addons/webxr/VRButton.js';
+
+    let scene, camera, renderer, clock, mixer;
+
+    init();
+    animate();
+
+    function init() {
+        // 1. Create the Scene & Clock for tracking animation time
+        scene = new THREE.Scene();
+        clock = new THREE.Clock();
+
+        // Add fog to give that "cloudy/mythical" atmosphere from your image
+        scene.fog = new THREE.FogExp2(0x1a0d00, 0.015);
+
+        // 2. Setup Camera
+        camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 5, 15);
+
+        // 3. Setup WebGL Renderer with VR (WebXR) enabled
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.toneMapping = THREE.ACESFilmicToneMapping; // Gives a cinematic, realistic look
+        renderer.toneMappingExposure = 1.2;
+        renderer.xr.enabled = true; // ENABLES METAVERSE/VR HEADSETS
+        document.body.appendChild(renderer.domElement);
+
+        // Add the VR Button to the page
+        document.body.appendChild(VRButton.createButton(renderer));
+
+        // 4. Cinematic Golden Lighting (To match the fiery golden dragon)
+        const ambientLight = new THREE.AmbientLight(0x331a00, 0.5); 
+        scene.add(ambientLight);
+
+        const sunLight = new THREE.DirectionalLight(0xffaa44, 2); // Intense golden light
+        sunLight.position.set(10, 20, 10);
+        scene.add(sunLight);
+
+        const fieryGlow = new THREE.PointLight(0xff5500, 3, 50); // Internal fire glow
+        fieryGlow.position.set(0, 2, 0);
+        scene.add(fieryGlow);
+
+        // 5. Camera Controls (For non-VR viewing)
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+
+        // 6. Load the 3D Dragon Model
+        const loader = new GLTFLoader();
+        // NOTE: Replace this URL with a link to your own animated 3D Dragon .gltf/.glb file
+        const modelUrl = 'https://raw.grawity.com/KhronosGroup/3D-Models/main/2.0/DragonAttenuation/glTF-Binary/DragonAttenuation.glb'; 
+
+        loader.load(modelUrl, function (gltf) {
+            const dragon = gltf.scene;
+            
+            // Apply a metallic, shiny golden material to simulate real scales
+            dragon.traverse((child) => {
+                if (child.isMesh) {
+                    child.material.metalness = 0.9;
+                    child.material.roughness = 0.2;
+                    child.material.color.setHex(0xffaa00); // Golden scales
+                }
+            });
+
+            dragon.scale.set(2, 2, 2); // Adjust size
+            dragon.position.set(0, 0, 0);
+            scene.add(dragon);
+
+            // Handle Animations embedded inside the 3D model (e.g., flying, snaking)
+            if (gltf.animations && gltf.animations.length > 0) {
+                mixer = new THREE.AnimationMixer(dragon);
+                const action = mixer.clipAction(gltf.animations[0]); // Plays the default movement
+                action.play();
+            }
+
+        }, undefined, function (error) {
+            console.error('An error happened while loading the dragon model:', error);
+        });
+
+        // Handle window resizing
+        window.addEventListener('resize', onWindowResize);
+    }
+
+    function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    // 7. The Core Animation Loop (Compatible with VR frame rates)
+    function animate() {
+        renderer.setAnimationLoop(render);
+    }
+
+    function render() {
+        const delta = clock.getDelta();
+        
+        // Update the dragon's bone movements
+        if (mixer) mixer.update(delta);
+
+        renderer.render(scene, camera);
+    }
+</script>
+</body>
+</html>
